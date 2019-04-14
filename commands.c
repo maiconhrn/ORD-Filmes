@@ -11,14 +11,16 @@
 #include "movie.h"
 
 Bool import(char *fileName) {
-    FILE *file = fopen(fileName, "r");
+    FILE *sourceFile = fopen(fileName, "r"),
+            *dataFile;
     Movie *movies = (Movie *) malloc(500 * sizeof(Movie));;
-    if (file != NULL) {
-        int regNum = importFromFile(file, &movies);
+    if (sourceFile != NULL) {
+        int regNum = importFromFile(sourceFile, &movies);
         if (regNum > 0) {
+            dataFile = exportToBinaryFile(&movies, regNum);
 
-
-            fclose(file);
+            fclose(dataFile);
+            fclose(sourceFile);
             free(movies);
             return true;
         }
@@ -27,7 +29,7 @@ Bool import(char *fileName) {
     }
 
     free(movies);
-    fclose(file);
+    fclose(sourceFile);
     return false;
 }
 
