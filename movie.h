@@ -7,8 +7,9 @@
 
 #include <stdio.h>
 #include "bool.h"
+#include "keyoffset.h"
 
-static short id = 0;
+#define DATA_FILE_NAME "dados.dat"
 
 typedef struct {
     int id;
@@ -19,10 +20,10 @@ typedef struct {
     char rating[150];
 } Movie;
 
-int importFromFile(FILE *file, Movie **movies);
+int importMoviesFromTxtFile(FILE *file, Movie **movies);
 
 Bool movieToRegStr(Movie movie, char *regStr);
 
-FILE *exportToBinaryFile(Movie **movies, int size);
+Bool exportMoviesToBinaryFile(Movie **movies, int size);
 
 #endif //FILMES_MOVIE_H
