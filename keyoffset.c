@@ -11,57 +11,49 @@ int compareKeyOffset(const void *a, const void *b) {
     return ((const KeyOffset *) a)->key - ((const KeyOffset *) b)->key;
 }
 
-void sortKeyOffset(KeyOffset **keyOffsetArr, int size) {
+void sortKeyOffsets(KeyOffset *keyOffsetArr, int size) {
     qsort(keyOffsetArr, size, sizeof(KeyOffset), compareKeyOffset);
 }
 
-KeyOffset *findKeyOffset(KeyOffset **keyOffsetArr, int size, int key) {
+KeyOffset *findKeyOffset(KeyOffset *keyOffsetArr, int size, int key) {
     return (KeyOffset *) bsearch(&key, keyOffsetArr, size, sizeof(KeyOffset), compareKeyOffset);
 }
 
-void exportKeyOffsetsToBinaryFile(KeyOffset **keyOffsetArr, int size) {
+void exportKeyOffsetsToBinaryFile(KeyOffset *keyOffsetArr, int size) {
     FILE *indexFile = fopen(INDEX_FILE_NAME, "wb");
 
-    fwrite(&size, 1, 1 * sizeof(int), indexFile);
+    fwrite(&size, sizeof(int), 1, indexFile);
     for (int i = 0; i < size; ++i) {
-        fwrite(&((*keyOffsetArr)[i].key), 1, sizeof(int), indexFile);
-        fwrite("|", 1, sizeof(char), indexFile);
-        fwrite(&((*keyOffsetArr)[i].offset), 1, sizeof(int), indexFile);
-        fwrite("|", 1, sizeof(char), indexFile);
+        fwrite(&keyOffsetArr[i].key, sizeof(int), 1, indexFile);
+        fwrite("|", sizeof(char), 1, indexFile);
+        fwrite(&keyOffsetArr[i].offset, sizeof(int), 1, indexFile);
+        fwrite("|", sizeof(char), 1, indexFile);
     }
+
     fclose(indexFile);
 }
 
-short readReck(char *recbuff, FILE *fd) {
-    short rec_lgth;
-
-    if (fread(&rec_lgth, sizeof(rec_lgth), 1, fd) == 0) // get record length
-        return 0;
-
-    rec_lgth = fread(recbuff, sizeof(char), rec_lgth, fd); // read record
-    recbuff[rec_lgth] = '\0';
-
-    return rec_lgth;
-}
-
-void fillFromReg(KeyOffset *keyOffset, char *reg) {
-    keyOffset->key = atoi(strtok(reg, "|"));
-    keyOffset->offset = atoi(strtok(NULL, "|"));
-}
-
-int importIndexesFromBinaryFile(KeyOffset **keyOffsetArr) {
+int importKeyOffsetsFromBinaryFile(KeyOffset **keyOffsetArr) {
     FILE *indexFile = fopen(INDEX_FILE_NAME, "rb");
 
-    char reg[100];
-    int numRegs;
-    fread(&numRegs, 1, sizeof(int), indexFile);
+    if (indexFile == NULL) {
+        printf("Erro: Nao existe arquivo de indices");
+    } else {
+        int numRegs;
+        fread(&numRegs, sizeof(int), 1, indexFile);
 
-    *keyOffsetArr = (KeyOffset *) malloc(numRegs * sizeof(KeyOffset));
+        *keyOffsetArr = (KeyOffset *) malloc(numRegs * sizeof(KeyOffset));
 
-    for (int i = 0; i < numRegs; ++i) {
-        readReck(reg, indexFile);
-        fillFromReg(&(*keyOffsetArr)[i], reg);
+        for (int i = 0; i < numRegs; ++i) {
+            fread(&(*keyOffsetArr)[i].key, sizeof(int), 1, indexFile);
+            fseek(indexFile, 1, SEEK_CUR);
+            fread(&(*keyOffsetArr)[i].offset, sizeof(int), 1, indexFile);
+            fseek(indexFile, 1, SEEK_CUR);
+        }
+
+        fclose(indexFile);
+
+        return numRegs;
     }
-
-    return numRegs;
+    return 0;
 }

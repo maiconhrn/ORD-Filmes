@@ -24,6 +24,6 @@ int importMoviesFromTxtFile(FILE *file, Movie **movies);
 
 Bool movieToRegStr(Movie movie, char *regStr);
 
-Bool exportMoviesToBinaryFile(Movie **movies, int size);
+Bool exportMoviesToBinaryFile(Movie *movies, int size);
 
 #endif //FILMES_MOVIE_H

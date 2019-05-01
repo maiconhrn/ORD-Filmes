@@ -24,6 +24,8 @@ Movie convertFromStr(char *str) {
 int importMoviesFromTxtFile(FILE *file, Movie **movies) {
     char lineStr[500];
 
+    *movies = (Movie *) malloc(500 * sizeof(Movie));
+
     int i = 0;
     while (fgets(lineStr, 499, file) != NULL) {
         (*movies)[i] = convertFromStr(lineStr);
@@ -53,29 +55,29 @@ Bool movieToRegStr(Movie movie, char *regStr) {
     return true;
 }
 
-Bool exportMoviesToBinaryFile(Movie **movies, int size) {
+Bool exportMoviesToBinaryFile(Movie *movies, int size) {
     char reg[500];
     FILE *dataFile = fopen(DATA_FILE_NAME, "wb");
     int regOffset = sizeof(int);
     KeyOffset *keyOffsetArr = (KeyOffset *) malloc(size * sizeof(KeyOffset));
 
-//    fwrite("|", 1, 1 * sizeof(char), dataFile);
-    fwrite(&size, 1, 1 * sizeof(int), dataFile);
+//    fwrite("|", 1 * sizeof(char), 1, dataFile);
+    fwrite(&size, sizeof(int), 1, dataFile);
     for (int i = 0; i < size; ++i) {
-        movieToRegStr((*movies)[i], reg);
+        movieToRegStr(movies[i], reg);
         short regSize = (short) strlen(reg);
 
-        keyOffsetArr[i].key = (*movies)[i].id;
+        keyOffsetArr[i].key = movies[i].id;
         keyOffsetArr[i].offset = regOffset;
 
         regOffset += regSize + sizeof(regSize);
 
-        fwrite(&regSize, 1, sizeof(short), dataFile);
-        fwrite(reg, 1, strlen(reg) * sizeof(char), dataFile);
+        fwrite(&regSize, sizeof(short), 1, dataFile);
+        fwrite(reg, strlen(reg) * sizeof(char), 1, dataFile);
     }
-    fwrite("|", 1, 1 * sizeof(char), dataFile);
+    fwrite("|", 1 * sizeof(char), 1, dataFile);
 
-    exportKeyOffsetsToBinaryFile(&keyOffsetArr, size);
+    exportKeyOffsetsToBinaryFile(keyOffsetArr, size);
 
     fclose(dataFile);
 

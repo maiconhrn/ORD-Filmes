@@ -14,12 +14,12 @@ typedef struct {
     int offset;
 } KeyOffset;
 
-int importIndexesFromBinaryFile(KeyOffset **keyOffsetArr);
+int importKeyOffsetsFromBinaryFile(KeyOffset **keyOffsetArr);
 
-void exportKeyOffsetsToBinaryFile(KeyOffset **keyOffsetArr, int size);
+void exportKeyOffsetsToBinaryFile(KeyOffset *keyOffsetArr, int size);
 
-void sortKeyOffset(KeyOffset **keyOffsetArr, int size);
+void sortKeyOffsets(KeyOffset *keyOffsetArr, int size);
 
-KeyOffset *findKeyOffset(KeyOffset **keyOffsetArr, int size, int key);
+KeyOffset *findKeyOffset(KeyOffset *keyOffsetArr, int size, int key);
 
 #endif //FILMES_KEYOFFSET_H

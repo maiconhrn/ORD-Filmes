@@ -11,13 +11,16 @@
 #include "movie.h"
 #include "keyoffset.h"
 
+KeyOffset *keyOffsetArr;
+int numRegs;
+
 Bool import(char *fileName) {
     FILE *sourceFile = fopen(fileName, "r");
-    Movie *movies = (Movie *) malloc(500 * sizeof(Movie));
+    Movie *movies;
     if (sourceFile != NULL) {
-        int numRegs = importMoviesFromTxtFile(sourceFile, &movies);
+        numRegs = importMoviesFromTxtFile(sourceFile, &movies);
         if (numRegs > 0) {
-            exportMoviesToBinaryFile(&movies, numRegs);
+            exportMoviesToBinaryFile(movies, numRegs);
             fclose(sourceFile);
             free(movies);
             return true;
@@ -26,7 +29,6 @@ Bool import(char *fileName) {
         fprintf(stderr, "Nao e possivel ler o arquivo \"%s\"\n", fileName);
     }
 
-    free(movies);
     fclose(sourceFile);
     return false;
 }
@@ -43,38 +45,27 @@ short readRec(char *recbuff, FILE *fd) {
     return rec_lgth;
 }
 
-int findReg(const KeyOffset *keyOffset, char *res) {
+int findReg(KeyOffset *keyOffset, char *res) {
     FILE *dataFile = fopen(DATA_FILE_NAME, "rb");
     fseek(dataFile, keyOffset->offset, SEEK_SET);
-    return readRec(res, dataFile);
+    int bytesSize = readRec(res, dataFile);
+    fclose(dataFile);
+
+    return bytesSize;
 }
 
-//void findFilme(int key) {
-//    FILE *dataFile = fopen(DATA_FILE_NAME, "rb");
-//    int regOffset = sizeof(int), numReg;
-//    char reg[500];
-//
-//    fread(&numReg, sizeof(int), 1, dataFile);
-//
-//    for (int i = 0; i < numReg; ++i) {
-//
-//    }
-//
-//    sortKeyOffset(keyOffsetArr, numRegs);
-//    KeyOffset *keyOffset;
-//
-//    if ((keyOffset = (KeyOffset *) (findKeyOffset(keyOffsetArr, numRegs, key) == NULL))) {
-//        printf("Erro: registro nao encontrado!\n");
-//    } else {
-//        findReg(keyOffset, reg);
-//    }
-//}
-
 void findFilme(int key) {
-    KeyOffset *keyOffsetArr = NULL;
-    int numRegs = importIndexesFromBinaryFile(&keyOffsetArr);
-    sortKeyOffset(&keyOffsetArr, numRegs);
-    KeyOffset *keyOffset = findKeyOffset(&keyOffsetArr, numRegs, key);
+    char reg[500];
+
+    numRegs = importKeyOffsetsFromBinaryFile(&keyOffsetArr);
+    sortKeyOffsets(keyOffsetArr, numRegs);
+    KeyOffset *keyOffset = findKeyOffset(keyOffsetArr, numRegs, key);
+    if (keyOffset != NULL) {
+        int bytesSize = findReg(keyOffset, reg);
+        printf("%s (%d bytes)\n", reg, bytesSize);
+    } else {
+        printf("Erro: registro nao encontrado!\n");
+    }
 }
 
 Bool performOperation(char *fileName) {
