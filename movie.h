@@ -26,4 +26,6 @@ Bool movieToRegStr(Movie movie, char *regStr);
 
 Bool exportMoviesToBinaryFile(Movie *movies, int size);
 
+Bool insertMovieToBinaryFyle(char *movieStr);
+
 #endif //FILMES_MOVIE_H

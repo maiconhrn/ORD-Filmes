@@ -18,7 +18,9 @@ int importKeyOffsetsFromBinaryFile(KeyOffset **keyOffsetArr);
 
 void exportKeyOffsetsToBinaryFile(KeyOffset *keyOffsetArr, int size);
 
-void sortKeyOffsets(KeyOffset *keyOffsetArr, int size);
+void sortKeyOffsetsByKey(KeyOffset *keyOffsetArr, int size);
+
+void sortKeyOffsetsByOffset(KeyOffset *keyOffsetArr, int size);
 
 KeyOffset *findKeyOffset(KeyOffset *keyOffsetArr, int size, int key);
 

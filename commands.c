@@ -54,11 +54,10 @@ int findReg(KeyOffset *keyOffset, char *res) {
     return bytesSize;
 }
 
-void findFilme(int key) {
+void findMovie(int key) {
     char reg[500];
 
     numRegs = importKeyOffsetsFromBinaryFile(&keyOffsetArr);
-    sortKeyOffsets(keyOffsetArr, numRegs);
     KeyOffset *keyOffset = findKeyOffset(keyOffsetArr, numRegs, key);
     if (keyOffset != NULL) {
         int bytesSize = findReg(keyOffset, reg);
@@ -68,10 +67,15 @@ void findFilme(int key) {
     }
 }
 
+void insertMovie(char *movieStr) {
+    insertMovieToBinaryFyle(movieStr);
+
+}
+
 Bool performOperation(char *fileName) {
     FILE *operations = fopen(fileName, "r");
 
-    char lineStr[500], *operation;
+    char lineStr[500], *operation, *movieStr;
     int key;
 
     while (fgets(lineStr, 499, operations) != NULL) {
@@ -81,9 +85,11 @@ Bool performOperation(char *fileName) {
             case 1:
                 key = atoi(strtok(NULL, " \n"));
                 printf("Busca pelo registro de chave \"%d\"\n", key);
-                findFilme(key);
+                findMovie(key);
                 break;
             case 2:
+                movieStr = strtok(NULL, "\n");
+                insertMovie(movieStr);
                 break;
             case 3:
                 break;

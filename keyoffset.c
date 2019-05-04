@@ -7,16 +7,26 @@
 
 #include "keyoffset.h"
 
-int compareKeyOffset(const void *a, const void *b) {
+int compareKeyOffsetByKey(const void *a, const void *b) {
+    //key >= 0
     return ((const KeyOffset *) a)->key - ((const KeyOffset *) b)->key;
 }
 
-void sortKeyOffsets(KeyOffset *keyOffsetArr, int size) {
-    qsort(keyOffsetArr, size, sizeof(KeyOffset), compareKeyOffset);
+int compareKeyOffsetByOffset(const void *a, const void *b) {
+    //key >= 0
+    return ((const KeyOffset *) a)->offset - ((const KeyOffset *) b)->offset;
+}
+
+void sortKeyOffsetsByKey(KeyOffset *keyOffsetArr, int size) {
+    qsort(keyOffsetArr, size, sizeof(KeyOffset), compareKeyOffsetByKey);
+}
+
+void sortKeyOffsetsByOffset(KeyOffset *keyOffsetArr, int size) {
+    qsort(keyOffsetArr, size, sizeof(KeyOffset), compareKeyOffsetByOffset);
 }
 
 KeyOffset *findKeyOffset(KeyOffset *keyOffsetArr, int size, int key) {
-    return (KeyOffset *) bsearch(&key, keyOffsetArr, size, sizeof(KeyOffset), compareKeyOffset);
+    return (KeyOffset *) bsearch(&key, keyOffsetArr, size, sizeof(KeyOffset), compareKeyOffsetByKey);
 }
 
 void exportKeyOffsetsToBinaryFile(KeyOffset *keyOffsetArr, int size) {
@@ -56,4 +66,8 @@ int importKeyOffsetsFromBinaryFile(KeyOffset **keyOffsetArr) {
         return numRegs;
     }
     return 0;
+}
+
+int getBiggerOffset() {
+
 }
