@@ -112,7 +112,7 @@ int findAvaliableOffsetToInsert(FILE *dataFile, short sizeRequested,
         fseek(dataFile, offset, SEEK_SET);
         fread(&regSize, sizeof(short), 1, dataFile);
 
-        if (regSize > sizeof(short) + 1 && regSize >= sizeRequested) {
+        if (regSize >= sizeRequested) {
             fseek(dataFile, 1, SEEK_CUR);
             fread(&nextOffset, sizeof(int), 1, dataFile);
 
@@ -225,4 +225,42 @@ Bool removeMovieFromBinaryFyle(int key) {
     fclose(dataFile);
 
     return true;
+}
+
+short readRec(char *recbuff, FILE *fd) {
+    short rec_lgth;
+
+    if (fread(&rec_lgth, sizeof(rec_lgth), 1, fd) == 0) // get record length
+        return 0;
+
+    rec_lgth = fread(recbuff, sizeof(char), rec_lgth, fd); // read record
+    recbuff[rec_lgth] = '\0';
+
+    return rec_lgth;
+}
+
+int findReg(KeyOffset *keyOffset, char *res) {
+    FILE *dataFile = fopen(DATA_FILE_NAME, "rb");
+    fseek(dataFile, keyOffset->offset, SEEK_SET);
+    int bytesSize = readRec(res, dataFile);
+
+    fclose(dataFile);
+
+    return bytesSize;
+}
+
+Bool findMovieInBinaryFile(int key, char *reg) {
+    KeyOffset *keyOffsetArr;
+    int numRegs;
+
+    printf("Busca pelo registro de chave \"%d\"\n", key);
+
+    numRegs = importKeyOffsetsFromBinaryFile(&keyOffsetArr);
+    KeyOffset *keyOffset = findKeyOffset(keyOffsetArr, numRegs, key);
+    if (keyOffset != NULL) {
+        findReg(keyOffset, reg);
+        return true;
+    }
+
+    return false;
 }

@@ -22,9 +22,9 @@ typedef struct {
 
 int importMoviesFromTxtFile(char *fileName, Movie **movies);
 
-Bool movieToRegStr(Movie movie, char *regStr);
-
 Bool exportMoviesToBinaryFile(Movie *movies, int size);
+
+Bool findMovieInBinaryFile(int key, char *reg);
 
 Bool insertMovieToBinaryFyle(char *movieStr);
 

@@ -11,12 +11,10 @@
 #include "movie.h"
 #include "keyoffset.h"
 
-KeyOffset *keyOffsetArr;
-int numRegs;
-
 Bool import(char *fileName) {
     printf("\n");
 
+    int numRegs;
     Movie *movies;
     numRegs = importMoviesFromTxtFile(fileName, &movies);
     if (numRegs > 0) {
@@ -28,38 +26,11 @@ Bool import(char *fileName) {
     return false;
 }
 
-short readRec(char *recbuff, FILE *fd) {
-    short rec_lgth;
-
-    if (fread(&rec_lgth, sizeof(rec_lgth), 1, fd) == 0) // get record length
-        return 0;
-
-    rec_lgth = fread(recbuff, sizeof(char), rec_lgth, fd); // read record
-    recbuff[rec_lgth] = '\0';
-
-    return rec_lgth;
-}
-
-int findReg(KeyOffset *keyOffset, char *res) {
-    FILE *dataFile = fopen(DATA_FILE_NAME, "rb");
-    fseek(dataFile, keyOffset->offset, SEEK_SET);
-    int bytesSize = readRec(res, dataFile);
-
-    fclose(dataFile);
-
-    return bytesSize;
-}
-
 void findMovie(int key) {
     char reg[500];
 
-    printf("Busca pelo registro de chave \"%d\"\n", key);
-
-    numRegs = importKeyOffsetsFromBinaryFile(&keyOffsetArr);
-    KeyOffset *keyOffset = findKeyOffset(keyOffsetArr, numRegs, key);
-    if (keyOffset != NULL) {
-        int bytesSize = findReg(keyOffset, reg);
-        printf("%s (%d bytes)\n", reg, bytesSize);
+    if (findMovieInBinaryFile(key, reg)) {
+        printf("%s (%d bytes)\n", reg, strlen(reg));
     } else {
         printf("Erro: registro nao encontrado!\n");
     }
@@ -73,7 +44,7 @@ void removeMovie(int key) {
     removeMovieFromBinaryFyle(key);
 }
 
-Bool performOperation(char *fileName) {
+void performOperation(char *fileName) {
     FILE *operations = fopen(fileName, "r");
 
     char lineStr[500], *operation, *movieStr;
@@ -103,7 +74,5 @@ Bool performOperation(char *fileName) {
     }
 
     fclose(operations);
-
-    return false;
 }
 

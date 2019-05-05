@@ -10,6 +10,6 @@
 
 Bool import(char *fileName);
 
-Bool performOperation(char *fileName);
+void performOperation(char *fileName);
 
 #endif //FILMES_COMMANDS_H
