@@ -24,4 +24,8 @@ void sortKeyOffsetsByOffset(KeyOffset *keyOffsetArr, int size);
 
 KeyOffset *findKeyOffset(KeyOffset *keyOffsetArr, int size, int key);
 
+int addKeyOffset(KeyOffset **keyOffsetArr, int size, KeyOffset *keyOffset);
+
+int removeKeyOffset(KeyOffset **keyOffsetArr, int size, KeyOffset *keyOffset);
+
 #endif //FILMES_KEYOFFSET_H

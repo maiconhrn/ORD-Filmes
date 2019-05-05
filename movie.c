@@ -21,17 +21,23 @@ Movie convertFromMovieStr(char *str) {
     return movie;
 }
 
-int importMoviesFromTxtFile(FILE *file, Movie **movies) {
+int importMoviesFromTxtFile(char *fileName, Movie **movies) {
+    FILE *sourceFile = fopen(fileName, "r");
     char lineStr[500];
-
-    *movies = (Movie *) malloc(500 * sizeof(Movie));
-
     int i = 0;
-    while (fgets(lineStr, 499, file) != NULL) {
-        (*movies)[i] = convertFromMovieStr(lineStr);
-        i++;
-    }
 
+    if (sourceFile != NULL) {
+        *movies = (Movie *) malloc(500 * sizeof(Movie));
+
+        while (fgets(lineStr, 499, sourceFile) != NULL) {
+            (*movies)[i] = convertFromMovieStr(lineStr);
+            i++;
+        }
+
+        fclose(sourceFile);
+    } else {
+        fprintf(stderr, "Nao e possivel ler o arquivo \"%s\"\n", fileName);
+    }
     return i;
 }
 
@@ -61,7 +67,6 @@ Bool exportMoviesToBinaryFile(Movie *movies, int size) {
     int regOffset = 2 * sizeof(int), ledHead = -1;
     KeyOffset *keyOffsetArr = (KeyOffset *) malloc(size * sizeof(KeyOffset));
 
-//    fwrite("|", 1 * sizeof(char), 1, dataFile);
     fwrite(&ledHead, sizeof(int), 1, dataFile);
     fwrite(&size, sizeof(int), 1, dataFile);
     for (int i = 0; i < size; ++i) {
@@ -76,7 +81,6 @@ Bool exportMoviesToBinaryFile(Movie *movies, int size) {
         fwrite(&regSize, sizeof(short), 1, dataFile);
         fwrite(reg, strlen(reg) * sizeof(char), 1, dataFile);
     }
-//    fwrite("|", 1 * sizeof(char), 1, dataFile);
 
     sortKeyOffsetsByKey(keyOffsetArr, size);
 
@@ -87,42 +91,148 @@ Bool exportMoviesToBinaryFile(Movie *movies, int size) {
     return true;
 }
 
+int findAvaliableOffsetToInsert(FILE *dataFile, short sizeRequested,
+                                KeyOffset **keyOffsetArr, int *numReg) {
+    int ledHead, prevOffset, offset, nextOffset, size;
+    short regSize;
+
+    size = importKeyOffsetsFromBinaryFile(keyOffsetArr);
+
+    *numReg = size;
+
+    fseek(dataFile, 0, SEEK_SET);
+    fread(&ledHead, sizeof(int), 1, dataFile);
+
+    sortKeyOffsetsByOffset(*keyOffsetArr, size);
+
+    if (ledHead == -1) {
+        fseek(dataFile, (*keyOffsetArr)[size - 1].offset, SEEK_SET);
+        fread(&regSize, sizeof(short), 1, dataFile);
+        return (*keyOffsetArr)[size - 1].offset + regSize + sizeof(short);
+    } else {
+        offset = ledHead;
+        prevOffset = offset;
+        do {
+            fseek(dataFile, offset, SEEK_SET);
+            fread(&regSize, sizeof(short), 1, dataFile);
+
+            if (regSize > sizeof(short) + 1 && regSize == sizeRequested) {
+                fseek(dataFile, 1, SEEK_CUR);
+                fread(&nextOffset, sizeof(int), 1, dataFile);
+
+                if (prevOffset != ledHead) {
+                    fseek(dataFile, prevOffset + sizeof(short), SEEK_SET);
+                    fwrite(&nextOffset, sizeof(int), 1, dataFile);
+                } else {
+                    fseek(dataFile, 0, SEEK_SET);
+                    fwrite(&nextOffset, sizeof(int), 1, dataFile);
+                }
+
+//                return offset + regSize + sizeof(short);
+                return offset;
+            } else if (regSize > sizeof(short) + 1 && regSize > sizeRequested) {
+                short newBytesSize = regSize - sizeRequested - sizeof(short);
+                fseek(dataFile, -2, SEEK_CUR);
+                fwrite(&newBytesSize, sizeof(short), 1, dataFile);
+
+                return offset + newBytesSize + sizeof(short);
+//                return offset;
+            } else {
+                prevOffset = offset;
+
+                fseek(dataFile, 1, SEEK_CUR);
+                fread(&offset, sizeof(int), 1, dataFile);
+            }
+        } while (offset != -1);
+    }
+
+    return -1;
+}
+
 Bool insertMovieToBinaryFyle(char *movieStr) {
+
     FILE *dataFile = fopen(DATA_FILE_NAME, "r+b");
 
     Movie movie = convertFromMovieStr(movieStr);
 
     char reg[500];
-
     movieToRegStr(movie, reg);
 
-    int ledHead, size;
+    int numReg, avaliableOffset;
+
     short regSize = (short) strlen(reg);
 
-    KeyOffset *keyOffsetArr, keyOffset;
-    size = importKeyOffsetsFromBinaryFile(&keyOffsetArr);
+    printf("Insercao do registro de chave \"%d\" (%d bytes)\n", movie.id, regSize);
 
+    KeyOffset *keyOffsetArr, keyOffset;
 
     if (dataFile != NULL) {
-        fread(&ledHead, sizeof(int), 1, dataFile);
-        if (ledHead == -1) {
-            sortKeyOffsetsByOffset(keyOffsetArr, size);
-            keyOffset.key = movie.id;
-            keyOffset.offset = keyOffsetArr[size - 1].offset + regSize * sizeof(char) + sizeof(short);
-            keyOffsetArr = (KeyOffset *) realloc(keyOffsetArr, (size + 1) * sizeof(KeyOffset));
-            keyOffsetArr[size] = keyOffset;
-            size++;
 
-            fseek(dataFile, 0, SEEK_END);
-            fwrite(&regSize, sizeof(short), 1, dataFile);
-            fwrite(reg, regSize * sizeof(char), 1, dataFile);
+        avaliableOffset = findAvaliableOffsetToInsert(dataFile, regSize, &keyOffsetArr, &numReg);
 
-            sortKeyOffsetsByKey(keyOffsetArr, size);
-            exportKeyOffsetsToBinaryFile(keyOffsetArr, size);
+        keyOffset.key = movie.id;
+        keyOffset.offset = avaliableOffset;
+        numReg = addKeyOffset(&keyOffsetArr, numReg, &keyOffset);
+
+        fseek(dataFile, avaliableOffset, SEEK_SET);
+        fwrite(&regSize, sizeof(short), 1, dataFile);
+        fwrite(reg, regSize * sizeof(char), 1, dataFile);
+
+
+        if (avaliableOffset >= keyOffsetArr[numReg - 2].offset) {
+            printf("Local: fim do arquivo\n");
+        } else {
+            printf("Local: offset = %d bytes (%x)\n", avaliableOffset, avaliableOffset);
+            printf("Tamanho do espaco reutilizado: %d bytes\n", regSize);
         }
+
+        sortKeyOffsetsByKey(keyOffsetArr, numReg);
+        exportKeyOffsetsToBinaryFile(keyOffsetArr, numReg);
 
         fclose(dataFile);
     }
+
+    return true;
+}
+
+Bool removeMovieFromBinaryFyle(int key) {
+    FILE *dataFile = fopen(DATA_FILE_NAME, "r+b");
+    int size, ledHead;
+    short regSize;
+    KeyOffset *keyOffsetArr, *keyOffset;
+
+    printf("Remocao do registro de chave \"%d\"\n", key);
+
+    size = importKeyOffsetsFromBinaryFile(&keyOffsetArr);
+    sortKeyOffsetsByKey(keyOffsetArr, size);
+    keyOffset = findKeyOffset(keyOffsetArr, size, key);
+
+    if (keyOffset != NULL) {
+        fread(&ledHead, sizeof(int), 1, dataFile);
+
+        fseek(dataFile, keyOffset->offset, SEEK_SET);
+        fread(&regSize, sizeof(short), 1, dataFile);
+
+        fseek(dataFile, 0, SEEK_CUR);
+        fwrite("*", sizeof(char), 1, dataFile);
+        fwrite(&ledHead, sizeof(int), 1, dataFile);
+
+        fseek(dataFile, 0, SEEK_SET);
+        fwrite(&(keyOffset->offset), sizeof(int), 1, dataFile);
+
+        printf("Registro removido! (%d bytes)\n", regSize);
+        printf("Posicao: offset = %d bytes\n", keyOffset->offset);
+
+        sortKeyOffsetsByKey(keyOffsetArr, size);
+        size = removeKeyOffset(&keyOffsetArr, size, keyOffset);
+
+        exportKeyOffsetsToBinaryFile(keyOffsetArr, size);
+
+    } else {
+        printf("Erro: registro nao encontrado!\n");
+    }
+
+    fclose(dataFile);
 
     return true;
 }

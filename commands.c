@@ -15,21 +15,14 @@ KeyOffset *keyOffsetArr;
 int numRegs;
 
 Bool import(char *fileName) {
-    FILE *sourceFile = fopen(fileName, "r");
     Movie *movies;
-    if (sourceFile != NULL) {
-        numRegs = importMoviesFromTxtFile(sourceFile, &movies);
-        if (numRegs > 0) {
-            exportMoviesToBinaryFile(movies, numRegs);
-            fclose(sourceFile);
-            free(movies);
-            return true;
-        }
-    } else {
-        fprintf(stderr, "Nao e possivel ler o arquivo \"%s\"\n", fileName);
+    numRegs = importMoviesFromTxtFile(fileName, &movies);
+    if (numRegs > 0) {
+        exportMoviesToBinaryFile(movies, numRegs);
+        free(movies);
+        return true;
     }
 
-    fclose(sourceFile);
     return false;
 }
 
@@ -49,6 +42,7 @@ int findReg(KeyOffset *keyOffset, char *res) {
     FILE *dataFile = fopen(DATA_FILE_NAME, "rb");
     fseek(dataFile, keyOffset->offset, SEEK_SET);
     int bytesSize = readRec(res, dataFile);
+
     fclose(dataFile);
 
     return bytesSize;
@@ -56,6 +50,8 @@ int findReg(KeyOffset *keyOffset, char *res) {
 
 void findMovie(int key) {
     char reg[500];
+
+    printf("Busca pelo registro de chave \"%d\"\n", key);
 
     numRegs = importKeyOffsetsFromBinaryFile(&keyOffsetArr);
     KeyOffset *keyOffset = findKeyOffset(keyOffsetArr, numRegs, key);
@@ -69,7 +65,10 @@ void findMovie(int key) {
 
 void insertMovie(char *movieStr) {
     insertMovieToBinaryFyle(movieStr);
+}
 
+void removeMovie(int key) {
+    removeMovieFromBinaryFyle(key);
 }
 
 Bool performOperation(char *fileName) {
@@ -84,7 +83,6 @@ Bool performOperation(char *fileName) {
         switch (atoi(operation)) {
             case 1:
                 key = atoi(strtok(NULL, " \n"));
-                printf("Busca pelo registro de chave \"%d\"\n", key);
                 findMovie(key);
                 break;
             case 2:
@@ -92,11 +90,15 @@ Bool performOperation(char *fileName) {
                 insertMovie(movieStr);
                 break;
             case 3:
+                key = atoi(strtok(NULL, " \n"));
+                removeMovie(key);
                 break;
             default:
                 break;
         }
     }
+
+    fclose(operations);
 
     return false;
 }

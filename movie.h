@@ -20,12 +20,14 @@ typedef struct {
     char rating[150];
 } Movie;
 
-int importMoviesFromTxtFile(FILE *file, Movie **movies);
+int importMoviesFromTxtFile(char *fileName, Movie **movies);
 
 Bool movieToRegStr(Movie movie, char *regStr);
 
 Bool exportMoviesToBinaryFile(Movie *movies, int size);
 
 Bool insertMovieToBinaryFyle(char *movieStr);
+
+Bool removeMovieFromBinaryFyle(int key);
 
 #endif //FILMES_MOVIE_H
