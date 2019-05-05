@@ -105,86 +105,75 @@ int findAvaliableOffsetToInsert(FILE *dataFile, short sizeRequested,
 
     sortKeyOffsetsByOffset(*keyOffsetArr, size);
 
-    if (ledHead == -1) {
-        fseek(dataFile, (*keyOffsetArr)[size - 1].offset, SEEK_SET);
+    offset = ledHead;
+    prevOffset = offset;
+
+    while (offset != -1) {
+        fseek(dataFile, offset, SEEK_SET);
         fread(&regSize, sizeof(short), 1, dataFile);
-        return (*keyOffsetArr)[size - 1].offset + regSize + sizeof(short);
-    } else {
-        offset = ledHead;
-        prevOffset = offset;
-        do {
-            fseek(dataFile, offset, SEEK_SET);
-            fread(&regSize, sizeof(short), 1, dataFile);
 
-            if (regSize > sizeof(short) + 1 && regSize == sizeRequested) {
-                fseek(dataFile, 1, SEEK_CUR);
-                fread(&nextOffset, sizeof(int), 1, dataFile);
+        if (regSize > sizeof(short) + 1 && regSize >= sizeRequested) {
+            fseek(dataFile, 1, SEEK_CUR);
+            fread(&nextOffset, sizeof(int), 1, dataFile);
 
-                if (prevOffset != ledHead) {
-                    fseek(dataFile, prevOffset + sizeof(short), SEEK_SET);
-                    fwrite(&nextOffset, sizeof(int), 1, dataFile);
-                } else {
-                    fseek(dataFile, 0, SEEK_SET);
-                    fwrite(&nextOffset, sizeof(int), 1, dataFile);
-                }
+            fseek(dataFile, prevOffset != ledHead
+                            ? prevOffset + sizeof(short)
+                            : 0, SEEK_SET);
+            fwrite(&nextOffset, sizeof(int), 1, dataFile);
 
-//                return offset + regSize + sizeof(short);
-                return offset;
-            } else if (regSize > sizeof(short) + 1 && regSize > sizeRequested) {
-                short newBytesSize = regSize - sizeRequested - sizeof(short);
-                fseek(dataFile, -2, SEEK_CUR);
-                fwrite(&newBytesSize, sizeof(short), 1, dataFile);
-
-                return offset + newBytesSize + sizeof(short);
-//                return offset;
-            } else {
-                prevOffset = offset;
-
-                fseek(dataFile, 1, SEEK_CUR);
-                fread(&offset, sizeof(int), 1, dataFile);
+            fseek(dataFile, offset + sizeof(short) + sizeRequested, SEEK_SET);
+            for (int i = 0; i < regSize - sizeRequested; ++i) {
+                fwrite(".", sizeof(char), 1, dataFile);
             }
-        } while (offset != -1);
+
+            return offset;
+        } else {
+            prevOffset = offset;
+
+            fseek(dataFile, 1, SEEK_CUR);
+            fread(&offset, sizeof(int), 1, dataFile);
+        }
     }
 
-    return -1;
+    fseek(dataFile, (*keyOffsetArr)[size - 1].offset, SEEK_SET);
+    fread(&regSize, sizeof(short), 1, dataFile);
+    return (*keyOffsetArr)[size - 1].offset + regSize + sizeof(short);
 }
 
 Bool insertMovieToBinaryFyle(char *movieStr) {
-
     FILE *dataFile = fopen(DATA_FILE_NAME, "r+b");
-
     Movie movie = convertFromMovieStr(movieStr);
-
     char reg[500];
     movieToRegStr(movie, reg);
-
     int numReg, avaliableOffset;
-
     short regSize = (short) strlen(reg);
+    KeyOffset *keyOffsetArr, keyOffset;
 
     printf("Insercao do registro de chave \"%d\" (%d bytes)\n", movie.id, regSize);
 
-    KeyOffset *keyOffsetArr, keyOffset;
-
     if (dataFile != NULL) {
-
         avaliableOffset = findAvaliableOffsetToInsert(dataFile, regSize, &keyOffsetArr, &numReg);
 
         keyOffset.key = movie.id;
         keyOffset.offset = avaliableOffset;
         numReg = addKeyOffset(&keyOffsetArr, numReg, &keyOffset);
 
-        fseek(dataFile, avaliableOffset, SEEK_SET);
-        fwrite(&regSize, sizeof(short), 1, dataFile);
-        fwrite(reg, regSize * sizeof(char), 1, dataFile);
-
-
         if (avaliableOffset >= keyOffsetArr[numReg - 2].offset) {
+            fseek(dataFile, avaliableOffset, SEEK_SET);
+            fwrite(&regSize, sizeof(short), 1, dataFile);
+            fwrite(reg, regSize * sizeof(char), 1, dataFile);
+
             printf("Local: fim do arquivo\n");
         } else {
-            printf("Local: offset = %d bytes (%x)\n", avaliableOffset, avaliableOffset);
+            fseek(dataFile, avaliableOffset + sizeof(short), SEEK_SET);
+            fwrite(reg, regSize * sizeof(char), 1, dataFile);
+
+            printf("Local: offset = %d bytes (%x)\n", avaliableOffset, &avaliableOffset);
             printf("Tamanho do espaco reutilizado: %d bytes\n", regSize);
         }
+
+        fseek(dataFile, sizeof(int), SEEK_SET);
+        fwrite(&numReg, sizeof(int), 1, dataFile);
 
         sortKeyOffsetsByKey(keyOffsetArr, numReg);
         exportKeyOffsetsToBinaryFile(keyOffsetArr, numReg);
@@ -197,15 +186,15 @@ Bool insertMovieToBinaryFyle(char *movieStr) {
 
 Bool removeMovieFromBinaryFyle(int key) {
     FILE *dataFile = fopen(DATA_FILE_NAME, "r+b");
-    int size, ledHead;
+    int numReg, ledHead;
     short regSize;
     KeyOffset *keyOffsetArr, *keyOffset;
 
     printf("Remocao do registro de chave \"%d\"\n", key);
 
-    size = importKeyOffsetsFromBinaryFile(&keyOffsetArr);
-    sortKeyOffsetsByKey(keyOffsetArr, size);
-    keyOffset = findKeyOffset(keyOffsetArr, size, key);
+    numReg = importKeyOffsetsFromBinaryFile(&keyOffsetArr);
+    sortKeyOffsetsByKey(keyOffsetArr, numReg);
+    keyOffset = findKeyOffset(keyOffsetArr, numReg, key);
 
     if (keyOffset != NULL) {
         fread(&ledHead, sizeof(int), 1, dataFile);
@@ -223,11 +212,12 @@ Bool removeMovieFromBinaryFyle(int key) {
         printf("Registro removido! (%d bytes)\n", regSize);
         printf("Posicao: offset = %d bytes\n", keyOffset->offset);
 
-        sortKeyOffsetsByKey(keyOffsetArr, size);
-        size = removeKeyOffset(&keyOffsetArr, size, keyOffset);
+        sortKeyOffsetsByKey(keyOffsetArr, numReg);
+        numReg = removeKeyOffset(&keyOffsetArr, numReg, keyOffset);
+        exportKeyOffsetsToBinaryFile(keyOffsetArr, numReg);
 
-        exportKeyOffsetsToBinaryFile(keyOffsetArr, size);
-
+        fseek(dataFile, sizeof(int), SEEK_SET);
+        fwrite(&numReg, sizeof(int), 1, dataFile);
     } else {
         printf("Erro: registro nao encontrado!\n");
     }

@@ -15,6 +15,8 @@ KeyOffset *keyOffsetArr;
 int numRegs;
 
 Bool import(char *fileName) {
+    printf("\n");
+
     Movie *movies;
     numRegs = importMoviesFromTxtFile(fileName, &movies);
     if (numRegs > 0) {
@@ -79,6 +81,8 @@ Bool performOperation(char *fileName) {
 
     while (fgets(lineStr, 499, operations) != NULL) {
         operation = strtok(lineStr, " \n");
+
+        printf("\n");
 
         switch (atoi(operation)) {
             case 1:
