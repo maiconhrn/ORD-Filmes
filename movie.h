@@ -24,7 +24,7 @@ int importMoviesFromTxtFile(char *fileName, Movie **movies);
 
 Bool exportMoviesToBinaryFile(Movie *movies, int size);
 
-Bool findMovieInBinaryFile(int key, char *reg);
+int findMovieInBinaryFile(int key, char *reg);
 
 Bool insertMovieToBinaryFyle(char *movieStr);
 

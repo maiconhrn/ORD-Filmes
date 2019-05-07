@@ -28,9 +28,9 @@ Bool import(char *fileName) {
 
 void findMovie(int key) {
     char reg[500];
-
-    if (findMovieInBinaryFile(key, reg)) {
-        printf("%s (%d bytes)\n", reg, strlen(reg));
+    int regSize = findMovieInBinaryFile(key, reg);
+    if (regSize > 0) {
+        printf("%s (%d bytes)\n", reg, regSize);
     } else {
         printf("Erro: registro nao encontrado!\n");
     }

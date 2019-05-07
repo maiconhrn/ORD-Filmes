@@ -121,9 +121,9 @@ int findAvaliableOffsetToInsert(FILE *dataFile, short sizeRequested,
                             : 0, SEEK_SET);
             fwrite(&nextOffset, sizeof(int), 1, dataFile);
 
-            fseek(dataFile, offset + sizeof(short) + sizeRequested, SEEK_SET);
-            for (int i = 0; i < regSize - sizeRequested; ++i) {
-                fwrite(".", sizeof(char), 1, dataFile);
+            if (regSize - sizeRequested > 0) {
+                fseek(dataFile, offset + sizeof(short) + sizeRequested, SEEK_SET);
+                fwrite("\0", sizeof(char), 1, dataFile);
             }
 
             return offset;
@@ -168,7 +168,7 @@ Bool insertMovieToBinaryFyle(char *movieStr) {
             fseek(dataFile, avaliableOffset + sizeof(short), SEEK_SET);
             fwrite(reg, regSize * sizeof(char), 1, dataFile);
 
-            printf("Local: offset = %d bytes (%x)\n", avaliableOffset, &avaliableOffset);
+            printf("Local: offset = %d bytes (%x)\n", avaliableOffset, avaliableOffset);
             printf("Tamanho do espaco reutilizado: %d bytes\n", regSize);
         }
 
@@ -249,7 +249,7 @@ int findReg(KeyOffset *keyOffset, char *res) {
     return bytesSize;
 }
 
-Bool findMovieInBinaryFile(int key, char *reg) {
+int findMovieInBinaryFile(int key, char *reg) {
     KeyOffset *keyOffsetArr;
     int numRegs;
 
@@ -258,9 +258,8 @@ Bool findMovieInBinaryFile(int key, char *reg) {
     numRegs = importKeyOffsetsFromBinaryFile(&keyOffsetArr);
     KeyOffset *keyOffset = findKeyOffset(keyOffsetArr, numRegs, key);
     if (keyOffset != NULL) {
-        findReg(keyOffset, reg);
-        return true;
+        return findReg(keyOffset, reg);
     }
 
-    return false;
+    return -1;
 }
